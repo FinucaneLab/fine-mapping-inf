@@ -8,6 +8,15 @@ Clone this repo:
 git clone https://github.com/FinucaneLab/fine-mapping-inf.git
 cd fine-mapping-inf
 ```
+Install dependencies:
+```
+setuptools
+wheel
+numpy
+pandas
+scipy
+```
+
 We recommend that you install both SuSiE-inf and FINEMAP-inf.
 
 To install SuSiE-inf:
