@@ -1,5 +1,5 @@
 # Fine-mapping with infinitesimal effects
-This repo contains code for SuSiE-inf and FINEMAP-inf
+This repo contains code for SuSiE-inf (v1.2) and FINEMAP-inf (v1.3)
 
 ## Getting started
 
