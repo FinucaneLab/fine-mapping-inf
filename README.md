@@ -38,6 +38,9 @@ python run_fine_mapping.py -h
 ```
 to print a list of all command-line options.
 
+## Tutorial
+Please see [wiki](https://github.com/FinucaneLab/fine-mapping-inf/wiki) for tutorial.
+
 ## Author
 Zhou Fan (Yale)
 
