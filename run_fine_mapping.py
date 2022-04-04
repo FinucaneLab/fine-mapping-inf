@@ -164,7 +164,7 @@ if __name__ == '__main__':
             if len(LD)!=len(z): raise ValueError('Size of LD matrix does not match summary statistics')
             logging.info('Performing eigen decomposition')
             t0 = time.time()
-            eigenvals,V = scipy.linalg.eigh(LD, driver='evd')
+            eigenvals,V = scipy.linalg.eigh(LD)
             logging.info('Eigen decomposition took %0.2f seconds'%(time.time() - t0))
             Dsq = args.n * eigenvals
             if args.eigen_decomp_prefix is not None:
