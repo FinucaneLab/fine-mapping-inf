@@ -245,9 +245,8 @@ def cred(PIP,coverage=0.9,purity=0.5,LD=None,V=None,Dsq=None,n=None,dedup=True):
     else:
       LDloc = (V[rows,:]*Dsq).dot(V[rows,:].T)/n
     if np.min(np.abs(LDloc)) > purity:
-      if dedup:
-        cred = list(map(list, sorted(set(map(tuple, cred)), 
-                                     key=list(map(tuple, cred)).index)))
       cred.append(sorted(list(credset)))
+  if dedup:
+    cred = list(map(list, sorted(set(map(tuple, cred)), key=list(map(tuple, cred)).index)))
   return cred
 
