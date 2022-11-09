@@ -207,7 +207,7 @@ def susie(z,meansq,n,L,LD=None,V=None,Dsq=None,
   return {'PIP':PIP, 'mu':mu, 'omega':omega, 'ssq':ssq,
     'sigmasq':sigmasq, 'tausq':tausq, 'alpha': alpha}
 
-def cred(PIP,coverage=0.9,purity=0.5,LD=None,V=None,Dsq=None,n=None):
+def cred(PIP,coverage=0.9,purity=0.5,LD=None,V=None,Dsq=None,n=None,dedup=True):
   ''' Compute credible sets from single-effect PIPs
 
   PIP -- p x L PIP matrix output by susie
@@ -218,6 +218,7 @@ def cred(PIP,coverage=0.9,purity=0.5,LD=None,V=None,Dsq=None,n=None):
   V -- precomputed p x p matrix of eigenvectors of X'X
   Dsq -- precomputed length-p vector of eigenvalues of X'X
   n -- sample size
+  dedup -- remove duplicate CS's
   (Must provide either LD or the triple (V,Dsq,n), to do purity filtering)
 
   Returns: list of variable indices corresponding to credible sets
@@ -245,5 +246,7 @@ def cred(PIP,coverage=0.9,purity=0.5,LD=None,V=None,Dsq=None,n=None):
       LDloc = (V[rows,:]*Dsq).dot(V[rows,:].T)/n
     if np.min(np.abs(LDloc)) > purity:
       cred.append(sorted(list(credset)))
+  if dedup:
+    cred = list(map(list, sorted(set(map(tuple, cred)), key=list(map(tuple, cred)).index)))
   return cred
 
