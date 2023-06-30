@@ -1,9 +1,12 @@
+#!/usr/bin/env python3
 import pandas as pd
 import numpy as np
 import scipy.linalg
 import time
 import gzip
+import bgzip
 import logging
+import io
 import os
 import sys
 from susieinf import susie,cred
@@ -35,9 +38,13 @@ def read_large_file(file_name):
             return npz_file[file_keys[0]]
         else:
             raise ValueError('%s contains multiple keys'%(file_name))
-    elif file_ext in ['.gz', '.bgz']:
+    elif file_ext == '.gz':
         with gzip.open(file_name, 'rb') as f:
             return np.loadtxt(f)
+    elif file_ext == '.bgz':
+        with open(file_name, "rb") as raw:
+            with bgzip.BGZipReader(raw) as f:
+                return np.loadtxt(io.BufferedReader(f))
     else:
         raise ValueError('File extension %s of file %s currently not supported'%(file_ext, file_name))
 
@@ -54,6 +61,11 @@ def read_V_Dsq_from_file(V_file, Dsq_file):
         raise ValueError('Incorrect data shape for V or Dsq')
     return V,Dsq
 
+def write_bgz(df, out_file):
+    with open(out_file, "wb") as raw:
+        with bgzip.BGZipWriter(raw) as fh:
+            fh.write(df.to_csv(sep='\t', index=False).encode("utf-8"))
+
 def process_output(method_name, output_dict, df, output_prefix):
     if method_name == 'susieinf':
         df['prob'] = 1 - (1 - output_dict['PIP']).prod(axis=1)
@@ -69,9 +81,9 @@ def process_output(method_name, output_dict, df, output_prefix):
         if len(output_dict['cred'])>0:
             df = df.reset_index(drop=True)
             for i,x in enumerate(output_dict['cred']): df.loc[x,'cs'] = i+1
-        out_file = output_prefix+'.susieinf.gz'
+        out_file = output_prefix+'.susieinf.bgz'
         logging.info('Saving output to %s'%(out_file))
-        df.to_csv(out_file, sep='\t', index=False, compression='gzip')
+        write_bgz(df, out_file)
     elif method_name == 'finemapinf':
         df['prob'] = output_dict['PIP']
         df['post_mean_cond'] = output_dict['beta']
@@ -80,13 +92,13 @@ def process_output(method_name, output_dict, df, output_prefix):
         df['post_mean'] = df['post_mean_cond'] * df['prob'] + df['alpha']
         df['tausq'] = output_dict['tausq']
         df['sigmasq'] = output_dict['sigmasq']
-        out_file = output_prefix + '.finemapinf.gz'
+        out_file = output_prefix + '.finemapinf.bgz'
         logging.info('Saving output to %s'%(out_file))
-        df.to_csv(out_file, sep='\t', index=False, compression='gzip')
+        write_bgz(df, out_file)
         config_df = pd.DataFrame(output_dict['models'], columns=['prob','config'])
-        out_file = output_prefix + '.finemapinf.config.gz'
+        out_file = output_prefix + '.finemapinf.config.bgz'
         logging.info('Saving FINEMAP-inf configurations to %s'%(out_file))
-        config_df.to_csv(out_file, sep='\t', index=False, compression='gzip')
+        write_bgz(config_df, out_file)
 
 def susieinf_splash_screen():
     logging.info('*********************************************************************')
@@ -114,6 +126,7 @@ if __name__ == '__main__':
     parser.add_argument('--beta-col-name', type=str, help='Marginal effect size column name, if z score column name is not provided. --se-col-name must also be specified')
     parser.add_argument('--se-col-name', type=str, help='Marginal standard error column name, if z score column name is not provided. --beta-col-name must also be specified')
     parser.add_argument('--ld-file', type=str, help='Name of LD matrix file')
+    parser.add_argument('--upper-triangular-ld-matrix', action='store_true', help='Use upper triangular LD matrix. If not specified, lower triangular matrix will be used by default')
     parser.add_argument('--V-file', type=str, help='Name of file containing eigenvectors of XtX')
     parser.add_argument('--Dsq-file', type=str, help='Name of file containing eigenvalues of XtX')
 
@@ -164,7 +177,9 @@ if __name__ == '__main__':
             if len(LD)!=len(z): raise ValueError('Size of LD matrix does not match summary statistics')
             logging.info('Performing eigen decomposition')
             t0 = time.time()
-            eigenvals,V = scipy.linalg.eigh(LD)
+            if args.upper_triangular_ld_matrix:
+                logging.info('--upper-triangular-ld-matrix is specified. Upper triangular matrix will be used')
+            eigenvals,V = scipy.linalg.eigh(LD, lower=(not args.upper_triangular_ld_matrix))
             logging.info('Eigen decomposition took %0.2f seconds'%(time.time() - t0))
             Dsq = args.n * eigenvals
             if args.eigen_decomp_prefix is not None:

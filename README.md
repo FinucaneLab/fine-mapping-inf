@@ -16,6 +16,7 @@ wheel
 numpy
 pandas
 scipy
+bgzip
 ```
 
 We recommend that you install both SuSiE-inf and FINEMAP-inf.
