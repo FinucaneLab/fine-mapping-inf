@@ -60,7 +60,7 @@ def process_output(method_name, output_dict, df, output_prefix):
         L = output_dict['PIP'].shape[1]
         alpha_cols = ['alpha{}'.format(i) for i in range(1,L+1)]
         mu_cols = ['mu{}'.format(i) for i in range(1,L+1)]
-        df[alpha_cols + mu_cols + ['omega{}'.format(i) for i in range(1,L+1)]] = pd.DataFrame(np.concatenate((output_dict['PIP'], output_dict['mu'], output_dict['omega']), axis=1))
+        df[alpha_cols + mu_cols + ['omega{}'.format(i) for i in range(1,L+1)] + ['lbf_variable{}'.format(i) for i in range(1,L+1)]] = pd.DataFrame(np.concatenate((output_dict['PIP'], output_dict['mu'], output_dict['omega'], output_dict['lbf_variable']), axis=1))
         df['alpha'] = output_dict['alpha']
         df['post_mean'] = np.sum(df[mu_cols].values * df[alpha_cols].values, axis=1) + df['alpha']
         df['tausq'] = output_dict['tausq']
@@ -92,14 +92,14 @@ def susieinf_splash_screen():
     logging.info('*********************************************************************')
     logging.info('* SuSiE-inf')
     logging.info('* Version {}'.format(pkg_resources.require("susieinf")[0].version))
-    logging.info('* (C) Zhou Fan')
+    logging.info('* (C) Ran Cui, Zhou Fan')
     logging.info('*********************************************************************')
 
 def finemapinf_splash_screen():
     logging.info('*********************************************************************')
     logging.info('* FINEMAP-inf')
     logging.info('* Version {}'.format(pkg_resources.require("finemapinf")[0].version))
-    logging.info('* (C) Zhou Fan')
+    logging.info('* (C) Ran Cui, Zhou Fan')
     logging.info('*********************************************************************')
 
 
