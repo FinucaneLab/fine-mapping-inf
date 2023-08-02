@@ -123,6 +123,7 @@ def susie(z,meansq,n,L,LD=None,V=None,Dsq=None,
     PIP -- p x L matrix of PIPs, individually for each effect
     mu -- p x L matrix of posterior means conditional on causal
     omega -- p x L matrix of posterior precisions conditional on causal
+    lbf_variable -- p x L matrix of log-Bayes-factors, for each effect
     ssq -- length-L array of final effect size variances s^2
     sigmasq -- final value of sigma^2
     tausq -- final value of tau^2
@@ -146,6 +147,7 @@ def susie(z,meansq,n,L,LD=None,V=None,Dsq=None,
   if ssq is None: ssq = np.ones(L)*0.2
   if PIP is None: PIP = np.ones((p,L))/p
   if mu is None: mu = np.zeros((p,L))
+  lbf_variable = np.zeros((p,L))
   omega = diagXtOmegaX[:,np.newaxis]+1/ssq
   # Initialize prior causal probabilities
   if pi0 is None:
@@ -178,7 +180,8 @@ def susie(z,meansq,n,L,LD=None,V=None,Dsq=None,
       # Update omega, mu, and PIP
       omega[:,l] = diagXtOmegaX+1/ssq[l]
       mu[:,l] = XtOmegar/omega[:,l]
-      logPIP = XtOmegar**2/(2*omega[:,l])-0.5*np.log(omega[:,l]*ssq[l])+logpi0
+      lbf_variable[:,l] = XtOmegar**2/(2*omega[:,l])-0.5*np.log(omega[:,l]*ssq[l])
+      logPIP = lbf_variable[:,l]+logpi0
       PIP[:,l] = np.exp(logPIP-scipy.special.logsumexp(logPIP))
     # Update variance components
     if est_sigmasq or est_tausq:
@@ -204,8 +207,8 @@ def susie(z,meansq,n,L,LD=None,V=None,Dsq=None,
   XtOmegaXb = V.dot(V.T.dot(b)*Dsq/var)
   XtOmegar = XtOmegay-XtOmegaXb
   alpha = tausq*XtOmegar
-  return {'PIP':PIP, 'mu':mu, 'omega':omega, 'ssq':ssq,
-    'sigmasq':sigmasq, 'tausq':tausq, 'alpha': alpha}
+  return {'PIP':PIP, 'mu':mu, 'omega':omega, 'lbf_variable':lbf_variable,
+      'ssq':ssq, 'sigmasq':sigmasq, 'tausq':tausq, 'alpha': alpha}
 
 def cred(PIP,coverage=0.9,purity=0.5,LD=None,V=None,Dsq=None,n=None,dedup=True):
   ''' Compute credible sets from single-effect PIPs

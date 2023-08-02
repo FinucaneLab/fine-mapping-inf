@@ -1,5 +1,5 @@
-# Fine-mapping with infinitesimal effects v1.0
-This repo contains code for SuSiE-inf (v1.2) and FINEMAP-inf (v1.3)
+# Fine-mapping with infinitesimal effects v1.1
+This repo contains code for SuSiE-inf (v1.3) and FINEMAP-inf (v1.3)
 
 ## Getting started
 Python3.9 is recommended
@@ -41,8 +41,9 @@ to print a list of all command-line options.
 ## Tutorial
 Please see [wiki](https://github.com/FinucaneLab/fine-mapping-inf/wiki) for tutorial.
 
-## Author
-Zhou Fan (Yale)
+## Authors
+Ran Cui
+Zhou Fan
 
 ## Contact
 For questions and comments, please contact Ran Cui at rancui@broadinstitute.org
