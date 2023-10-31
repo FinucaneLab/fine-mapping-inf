@@ -213,6 +213,7 @@ if __name__ == '__main__':
                 susie_output = susie(z, args.meansq, args.n, args.num_sparse_effects, LD=None, V=V, Dsq=Dsq,
                                      est_tausq=False, est_ssq=True,ssq=None,ssq_range=(0,1),pi0=pi0, method=args.empirical_Bayes_method,
                                      sigmasq_range=None,tausq_range=None,PIP=None,mu=None,maxiter=100,PIP_tol=1e-3,verbose=True)
+                susie_output['cred'] = cred(susie_output['PIP'], coverage=args.coverage, purity=args.purity, LD=None,V=V, Dsq=Dsq, n=args.n)
         logging.info('Running SuSiE-inf took %0.2f seconds'%(time.time() - t0_susieinf))
         if args.save_npz:
             out_file = args.output_prefix+'.susieinf.npz'
