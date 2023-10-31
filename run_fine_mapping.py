@@ -141,6 +141,7 @@ if __name__ == '__main__':
     parser.add_argument('--num-epochs', type=int, default=5, help='Number of epochs for FINEMAP-inf. Tau-squred and sigma-squared estimates can potentially gain accuracy with more epochs.')
     parser.add_argument('--coverage', type=float, default=0.95, help='Credible set coverage')
     parser.add_argument('--purity', type=float, default=0.5, help='Credible set purity threshold')
+    parser.add_argument('--low-power-override', action='store_true', help='If output no credible set in a GWAS significant region, set tausq to zero')
 
     # output params
     parser.add_argument('--eigen-decomp-prefix', type=str, help='Save V and Dsq from decomposing of XtX to .npz files with specified file prefix')
@@ -205,6 +206,13 @@ if __name__ == '__main__':
                 est_ssq=True,ssq=None,ssq_range=(0,1),pi0=pi0, method=args.empirical_Bayes_method,
                 sigmasq_range=None,tausq_range=None,PIP=None,mu=None,maxiter=100,PIP_tol=1e-3,verbose=True)
         susie_output['cred'] = cred(susie_output['PIP'], coverage=args.coverage, purity=args.purity, LD=None,V=V, Dsq=Dsq, n=args.n)
+        if args.low_power_override and len(susie_output['cred'])==0:
+            # check if PIPs are low
+            if np.max(susie_output['PIP'])<0.1:
+                logging.info(f'No credible set output, maximum PIP {np.max(susie_output['PIP'])}. Low power, setting tau-squared to zero.')
+                susie_output = susie(z, args.meansq, args.n, args.num_sparse_effects, LD=None, V=V, Dsq=Dsq,
+                                     est_tausq=False, est_ssq=True,ssq=None,ssq_range=(0,1),pi0=pi0, method=args.empirical_Bayes_method,
+                                     sigmasq_range=None,tausq_range=None,PIP=None,mu=None,maxiter=100,PIP_tol=1e-3,verbose=True)
         logging.info('Running SuSiE-inf took %0.2f seconds'%(time.time() - t0_susieinf))
         if args.save_npz:
             out_file = args.output_prefix+'.susieinf.npz'
