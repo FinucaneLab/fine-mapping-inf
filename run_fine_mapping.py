@@ -218,6 +218,8 @@ if __name__ == '__main__':
         if args.save_npz:
             out_file = args.output_prefix+'.susieinf.npz'
             logging.info('Saving output dictionary to %s'%(out_file))
+            # modify dtype for susie_output['cred'] so savez wont give error
+            susie_output["cred"] = np.asarray(susie_output["cred"], dtype="object")
             np.savez_compressed(out_file, **susie_output)
         if args.save_tsv:
             process_output('susieinf', susie_output, z_df.copy(), args.output_prefix)
