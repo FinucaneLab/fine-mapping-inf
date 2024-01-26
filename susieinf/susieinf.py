@@ -123,7 +123,8 @@ def susie(z,meansq,n,L,LD=None,V=None,Dsq=None,
     PIP -- p x L matrix of PIPs, individually for each effect
     mu -- p x L matrix of posterior means conditional on causal
     omega -- p x L matrix of posterior precisions conditional on causal
-    lbf_variable -- p x L matrix of log-Bayes-factors, for each effect
+    lbf -- length-L array of log-Bayes-factor for each effect
+    lbf_variable -- p x L matrix of per-variable log-Bayes-factors
     ssq -- length-L array of final effect size variances s^2
     sigmasq -- final value of sigma^2
     tausq -- final value of tau^2
@@ -148,6 +149,7 @@ def susie(z,meansq,n,L,LD=None,V=None,Dsq=None,
   if PIP is None: PIP = np.ones((p,L))/p
   if mu is None: mu = np.zeros((p,L))
   lbf_variable = np.zeros((p,L))
+  lbf = np.zeros(L)
   omega = diagXtOmegaX[:,np.newaxis]+1/ssq
   # Initialize prior causal probabilities
   if pi0 is None:
@@ -182,7 +184,8 @@ def susie(z,meansq,n,L,LD=None,V=None,Dsq=None,
       mu[:,l] = XtOmegar/omega[:,l]
       lbf_variable[:,l] = XtOmegar**2/(2*omega[:,l])-0.5*np.log(omega[:,l]*ssq[l])
       logPIP = lbf_variable[:,l]+logpi0
-      PIP[:,l] = np.exp(logPIP-scipy.special.logsumexp(logPIP))
+      lbf[l] = scipy.special.logsumexp(logPIP)
+      PIP[:,l] = np.exp(logPIP-lbf[l])
     # Update variance components
     if est_sigmasq or est_tausq:
       if method == 'moments':
@@ -207,7 +210,8 @@ def susie(z,meansq,n,L,LD=None,V=None,Dsq=None,
   XtOmegaXb = V.dot(V.T.dot(b)*Dsq/var)
   XtOmegar = XtOmegay-XtOmegaXb
   alpha = tausq*XtOmegar
-  return {'PIP':PIP, 'mu':mu, 'omega':omega, 'lbf_variable':lbf_variable,
+  return {'PIP':PIP, 'mu':mu, 'omega':omega,
+      'lbf': lbf, 'lbf_variable':lbf_variable,
       'ssq':ssq, 'sigmasq':sigmasq, 'tausq':tausq, 'alpha': alpha}
 
 def cred(PIP,coverage=0.9,purity=0.5,LD=None,V=None,Dsq=None,n=None,dedup=True):
