@@ -1,9 +1,12 @@
+#!/usr/bin/env python3
 import pandas as pd
 import numpy as np
 import scipy.linalg
 import time
 import gzip
+import bgzip
 import logging
+import io
 import os
 import sys
 from susieinf import susie,cred
@@ -35,9 +38,13 @@ def read_large_file(file_name):
             return npz_file[file_keys[0]]
         else:
             raise ValueError('%s contains multiple keys'%(file_name))
-    elif file_ext in ['.gz', '.bgz']:
+    elif file_ext == '.gz':
         with gzip.open(file_name, 'rb') as f:
             return np.loadtxt(f)
+    elif file_ext == '.bgz':
+        with open(file_name, "rb") as raw:
+            with bgzip.BGZipReader(raw) as f:
+                return np.loadtxt(io.BufferedReader(f))
     else:
         raise ValueError('File extension %s of file %s currently not supported'%(file_ext, file_name))
 
@@ -54,6 +61,11 @@ def read_V_Dsq_from_file(V_file, Dsq_file):
         raise ValueError('Incorrect data shape for V or Dsq')
     return V,Dsq
 
+def write_bgz(df, out_file):
+    with open(out_file, "wb") as raw:
+        with bgzip.BGZipWriter(raw) as fh:
+            fh.write(df.to_csv(sep='\t', index=False).encode("utf-8"))
+
 def process_output(method_name, output_dict, df, output_prefix):
     if method_name == 'susieinf':
         df['prob'] = 1 - (1 - output_dict['PIP']).prod(axis=1)
@@ -69,9 +81,9 @@ def process_output(method_name, output_dict, df, output_prefix):
         if len(output_dict['cred'])>0:
             df = df.reset_index(drop=True)
             for i,x in enumerate(output_dict['cred']): df.loc[x,'cs'] = i+1
-        out_file = output_prefix+'.susieinf.gz'
+        out_file = output_prefix+'.susieinf.bgz'
         logging.info('Saving output to %s'%(out_file))
-        df.to_csv(out_file, sep='\t', index=False, compression='gzip')
+        write_bgz(df, out_file)
     elif method_name == 'finemapinf':
         df['prob'] = output_dict['PIP']
         df['post_mean_cond'] = output_dict['beta']
@@ -80,13 +92,13 @@ def process_output(method_name, output_dict, df, output_prefix):
         df['post_mean'] = df['post_mean_cond'] * df['prob'] + df['alpha']
         df['tausq'] = output_dict['tausq']
         df['sigmasq'] = output_dict['sigmasq']
-        out_file = output_prefix + '.finemapinf.gz'
+        out_file = output_prefix + '.finemapinf.bgz'
         logging.info('Saving output to %s'%(out_file))
-        df.to_csv(out_file, sep='\t', index=False, compression='gzip')
+        write_bgz(df, out_file)
         config_df = pd.DataFrame(output_dict['models'], columns=['prob','config'])
-        out_file = output_prefix + '.finemapinf.config.gz'
+        out_file = output_prefix + '.finemapinf.config.bgz'
         logging.info('Saving FINEMAP-inf configurations to %s'%(out_file))
-        config_df.to_csv(out_file, sep='\t', index=False, compression='gzip')
+        write_bgz(config_df, out_file)
 
 def susieinf_splash_screen():
     logging.info('*********************************************************************')
@@ -114,6 +126,7 @@ if __name__ == '__main__':
     parser.add_argument('--beta-col-name', type=str, help='Marginal effect size column name, if z score column name is not provided. --se-col-name must also be specified')
     parser.add_argument('--se-col-name', type=str, help='Marginal standard error column name, if z score column name is not provided. --beta-col-name must also be specified')
     parser.add_argument('--ld-file', type=str, help='Name of LD matrix file')
+    parser.add_argument('--upper-triangular-ld-matrix', action='store_true', help='Use upper triangular LD matrix. If not specified, lower triangular matrix will be used by default')
     parser.add_argument('--V-file', type=str, help='Name of file containing eigenvectors of XtX')
     parser.add_argument('--Dsq-file', type=str, help='Name of file containing eigenvalues of XtX')
 
@@ -128,6 +141,7 @@ if __name__ == '__main__':
     parser.add_argument('--num-epochs', type=int, default=5, help='Number of epochs for FINEMAP-inf. Tau-squred and sigma-squared estimates can potentially gain accuracy with more epochs.')
     parser.add_argument('--coverage', type=float, default=0.95, help='Credible set coverage')
     parser.add_argument('--purity', type=float, default=0.5, help='Credible set purity threshold')
+    parser.add_argument('--low-power-override', action='store_true', help='If output no credible set in a GWAS significant region, set tausq to zero')
 
     # output params
     parser.add_argument('--eigen-decomp-prefix', type=str, help='Save V and Dsq from decomposing of XtX to .npz files with specified file prefix')
@@ -164,7 +178,9 @@ if __name__ == '__main__':
             if len(LD)!=len(z): raise ValueError('Size of LD matrix does not match summary statistics')
             logging.info('Performing eigen decomposition')
             t0 = time.time()
-            eigenvals,V = scipy.linalg.eigh(LD)
+            if args.upper_triangular_ld_matrix:
+                logging.info('--upper-triangular-ld-matrix is specified. Upper triangular matrix will be used')
+            eigenvals,V = scipy.linalg.eigh(LD, lower=(not args.upper_triangular_ld_matrix))
             logging.info('Eigen decomposition took %0.2f seconds'%(time.time() - t0))
             Dsq = args.n * eigenvals
             if args.eigen_decomp_prefix is not None:
@@ -190,10 +206,20 @@ if __name__ == '__main__':
                 est_ssq=True,ssq=None,ssq_range=(0,1),pi0=pi0, method=args.empirical_Bayes_method,
                 sigmasq_range=None,tausq_range=None,PIP=None,mu=None,maxiter=100,PIP_tol=1e-3,verbose=True)
         susie_output['cred'] = cred(susie_output['PIP'], coverage=args.coverage, purity=args.purity, LD=None,V=V, Dsq=Dsq, n=args.n)
+        if args.low_power_override and len(susie_output['cred'])==0:
+            # check if PIPs are low
+            if np.max(susie_output['PIP'])<0.1:
+                logging.info('No credible set output, low power, setting tau-squared to zero.')
+                susie_output = susie(z, args.meansq, args.n, args.num_sparse_effects, LD=None, V=V, Dsq=Dsq,
+                                     est_tausq=False, est_ssq=True,ssq=None,ssq_range=(0,1),pi0=pi0, method=args.empirical_Bayes_method,
+                                     sigmasq_range=None,tausq_range=None,PIP=None,mu=None,maxiter=100,PIP_tol=1e-3,verbose=True)
+                susie_output['cred'] = cred(susie_output['PIP'], coverage=args.coverage, purity=args.purity, LD=None,V=V, Dsq=Dsq, n=args.n)
         logging.info('Running SuSiE-inf took %0.2f seconds'%(time.time() - t0_susieinf))
         if args.save_npz:
             out_file = args.output_prefix+'.susieinf.npz'
             logging.info('Saving output dictionary to %s'%(out_file))
+            # modify dtype for susie_output['cred'] so savez wont give error
+            susie_output["cred"] = np.asarray(susie_output["cred"], dtype="object")
             np.savez_compressed(out_file, **susie_output)
         if args.save_tsv:
             process_output('susieinf', susie_output, z_df.copy(), args.output_prefix)

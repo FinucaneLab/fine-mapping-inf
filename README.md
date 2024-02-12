@@ -1,5 +1,5 @@
 # Fine-mapping with infinitesimal effects v1.1
-This repo contains code for SuSiE-inf (v1.3) and FINEMAP-inf (v1.3)
+This repo contains code for SuSiE-inf (v1.1) and FINEMAP-inf (v1.1)
 
 ## Getting started
 Python3.9 is recommended
@@ -16,6 +16,7 @@ wheel
 numpy
 pandas
 scipy
+bgzip
 ```
 
 We recommend that you install both SuSiE-inf and FINEMAP-inf.
