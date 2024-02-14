@@ -1,5 +1,5 @@
-# Fine-mapping with infinitesimal effects v1.1
-This repo contains code for SuSiE-inf (v1.1) and FINEMAP-inf (v1.1)
+# Fine-mapping with infinitesimal effects v1.2
+This repo contains code for SuSiE-inf (v1.4) and FINEMAP-inf (v1.3)
 
 ## Getting started
 Python3.9 is recommended
