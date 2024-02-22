@@ -136,6 +136,7 @@ if __name__ == '__main__':
     parser.add_argument('--num-sparse-effects', type=int, default=10, help='Maximum number of sparse large effects in the region')
     parser.add_argument('--method', type=str, default='susieinf,finemapinf', help='Comma delimited fine-mapping methods to run, e.g. susieinf,finemapinf')
     parser.add_argument('--est-finemapinf-tausq', action='store_true', help='Do not use SuSiE-inf generated tau-squared or sigmasq for FINEMAP-inf')
+    parser.add_argument('--no-inf', action='store_true', help='Set infinitesimal effects to zero, the results generated when this flag is active should be identical to SuSiE results')
     parser.add_argument('--empirical-Bayes-method', type=str, default='moments', help='One of {"moments","MLE"}. Sigma-squared and tau-squared will be estimated using either method-of-moments or MLE')
     parser.add_argument('--prior', type=str, help='File name for user specified causal priors. Values must sum to 1. Algorithm default uses uniform prior.')
     parser.add_argument('--num-epochs', type=int, default=5, help='Number of epochs for FINEMAP-inf. Tau-squred and sigma-squared estimates can potentially gain accuracy with more epochs.')
@@ -202,18 +203,25 @@ if __name__ == '__main__':
     if 'susieinf' in methods:
         t0_susieinf = time.time()
         susieinf_splash_screen()
-        susie_output = susie(z, args.meansq, args.n, args.num_sparse_effects, LD=None, V=V, Dsq=Dsq,
-                est_ssq=True,ssq=None,ssq_range=(0,1),pi0=pi0, method=args.empirical_Bayes_method,
-                sigmasq_range=None,tausq_range=None,PIP=None,mu=None,maxiter=100,PIP_tol=1e-3,verbose=True)
-        susie_output['cred'] = cred(susie_output['PIP'], coverage=args.coverage, purity=args.purity, LD=None,V=V, Dsq=Dsq, n=args.n)
-        if args.low_power_override and len(susie_output['cred'])==0:
-            # check if PIPs are low
-            if np.max(susie_output['PIP'])<0.1:
-                logging.info('No credible set output, low power, setting tau-squared to zero.')
-                susie_output = susie(z, args.meansq, args.n, args.num_sparse_effects, LD=None, V=V, Dsq=Dsq,
-                                     est_tausq=False, est_ssq=True,ssq=None,ssq_range=(0,1),pi0=pi0, method=args.empirical_Bayes_method,
-                                     sigmasq_range=None,tausq_range=None,PIP=None,mu=None,maxiter=100,PIP_tol=1e-3,verbose=True)
-                susie_output['cred'] = cred(susie_output['PIP'], coverage=args.coverage, purity=args.purity, LD=None,V=V, Dsq=Dsq, n=args.n)
+        if not args.no_inf:
+            susie_output = susie(z, args.meansq, args.n, args.num_sparse_effects, LD=None, V=V, Dsq=Dsq,
+                    est_ssq=True,ssq=None,ssq_range=(0,1),pi0=pi0, method=args.empirical_Bayes_method,
+                    sigmasq_range=None,tausq_range=None,PIP=None,mu=None,maxiter=100,PIP_tol=1e-3,verbose=True)
+            susie_output['cred'] = cred(susie_output['PIP'], coverage=args.coverage, purity=args.purity, LD=None,V=V, Dsq=Dsq, n=args.n)
+            if args.low_power_override and len(susie_output['cred'])==0:
+                # check if PIPs are low
+                if np.max(susie_output['PIP'])<0.1:
+                    logging.info('No credible set output, low power, setting tau-squared to zero.')
+                    susie_output = susie(z, args.meansq, args.n, args.num_sparse_effects, LD=None, V=V, Dsq=Dsq,
+                                         est_tausq=False, est_ssq=True,ssq=None,ssq_range=(0,1),pi0=pi0, method=args.empirical_Bayes_method,
+                                         sigmasq_range=None,tausq_range=None,PIP=None,mu=None,maxiter=100,PIP_tol=1e-3,verbose=True)
+                    susie_output['cred'] = cred(susie_output['PIP'], coverage=args.coverage, purity=args.purity, LD=None,V=V, Dsq=Dsq, n=args.n)
+        if args.no_inf:
+            logging.info('--no-inf flag is activated, setting infinitesimal effects to zero, the results should be identical to SuSiE results')
+            susie_output = susie(z, args.meansq, args.n, args.num_sparse_effects, LD=None, V=V, Dsq=Dsq,
+                                 est_tausq=False, est_ssq=True,ssq=None,ssq_range=(0,1),pi0=pi0, method=args.empirical_Bayes_method,
+                                 sigmasq_range=None,tausq_range=None,PIP=None,mu=None,maxiter=100,PIP_tol=1e-3,verbose=True)
+            susie_output['cred'] = cred(susie_output['PIP'], coverage=args.coverage, purity=args.purity, LD=None,V=V, Dsq=Dsq, n=args.n)
         logging.info('Running SuSiE-inf took %0.2f seconds'%(time.time() - t0_susieinf))
         if args.save_npz:
             out_file = args.output_prefix+'.susieinf.npz'
