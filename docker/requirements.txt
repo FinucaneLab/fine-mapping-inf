@@ -1,0 +1,6 @@
+setuptools
+numpy
+pandas
+scipy
+wheel
+bgzip
