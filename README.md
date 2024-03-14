@@ -41,6 +41,7 @@ to print a list of all command-line options.
 
 ## Tutorial
 Please see [wiki](https://github.com/FinucaneLab/fine-mapping-inf/wiki) for tutorial.
+**Note that both SuSiE-inf and FINEMAP-inf are developed for use in single-cohort fine-mapping with in-sample LD, for fine-mapping of meta-analyzed GWAS with reference panel LD, please see methods like [SLALOM](https://www.cell.com/cell-genomics/pdf/S2666-979X(22)00163-X.pdf) or [CARMA](https://www.nature.com/articles/s41588-023-01392-0).**
 
 ## Authors
 Ran Cui
