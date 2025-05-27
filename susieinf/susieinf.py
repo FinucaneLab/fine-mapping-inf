@@ -203,8 +203,11 @@ def susie(z,meansq,n,L,LD=None,V=None,Dsq=None,
     PIP_diff = np.max(np.abs(PIP_prev-PIP))
     if verbose: print('Maximum change in PIP: %f' % PIP_diff)
     if PIP_diff < PIP_tol:
+      converged = True
       if verbose: print('CONVERGED')
       break
+  if (it == maxiter - 1) and PIP_diff > PIP_tol:
+    converged = False
   # Compute posterior means of b and alpha
   b = np.sum(mu*PIP,axis=1)
   XtOmegaXb = V.dot(V.T.dot(b)*Dsq/var)
@@ -212,7 +215,7 @@ def susie(z,meansq,n,L,LD=None,V=None,Dsq=None,
   alpha = tausq*XtOmegar
   return {'PIP':PIP, 'mu':mu, 'omega':omega,
       'lbf': lbf, 'lbf_variable':lbf_variable,
-      'ssq':ssq, 'sigmasq':sigmasq, 'tausq':tausq, 'alpha': alpha}
+      'ssq':ssq, 'sigmasq':sigmasq, 'tausq':tausq, 'alpha': alpha, 'converged': converged}
 
 def cred(PIP,coverage=0.9,purity=0.5,LD=None,V=None,Dsq=None,n=None,dedup=True):
   ''' Compute credible sets from single-effect PIPs
