@@ -208,6 +208,12 @@ if __name__ == '__main__':
                     est_ssq=True,ssq=None,ssq_range=(0,1),pi0=pi0, method=args.empirical_Bayes_method,
                     sigmasq_range=None,tausq_range=None,PIP=None,mu=None,maxiter=100,PIP_tol=1e-3,verbose=True)
             susie_output['cred'] = cred(susie_output['PIP'], coverage=args.coverage, purity=args.purity, LD=None,V=V, Dsq=Dsq, n=args.n)
+            if not susie_output['converged']:
+                logging.info('SuSiE-inf did not converge, setting tau-squared to zero.')
+                susie_output = susie(z, args.meansq, args.n, args.num_sparse_effects, LD=None, V=V, Dsq=Dsq,
+                                         est_tausq=False, est_ssq=True,ssq=None,ssq_range=(0,1),pi0=pi0, method=args.empirical_Bayes_method,
+                                         sigmasq_range=None,tausq_range=None,PIP=None,mu=None,maxiter=100,PIP_tol=1e-3,verbose=True)
+                susie_output['cred'] = cred(susie_output['PIP'], coverage=args.coverage, purity=args.purity, LD=None,V=V, Dsq=Dsq, n=args.n)
             if args.low_power_override and len(susie_output['cred'])==0:
                 # check if PIPs are low
                 if np.max(susie_output['PIP'])<0.1:
